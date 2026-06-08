@@ -34,9 +34,17 @@ color_seleccionado = st.selectbox(
 
 # Paleta de tonos de madera
 PALETA_MADERA = {
-    -1: "#1e1e1e",
-    1: "#D4A373", 2: "#D8A878", 3: "#CE9D6D", 4: "#DAAA7A", 5: "#D09F6F",
-    6: "#D6A676", 7: "#CC9B6B", 8: "#D2A272", 9: "#D9A979", 10: "#CFA070"
+    -1: "#1e1e1e", # Fondo vacío
+    1: "#E9C46A",  # Amarillo pino
+    2: "#F4A261",  # Naranja claro
+    3: "#E76F51",  # Terracota
+    4: "#D4A373",  # Roble clásico
+    5: "#C68642",  # Madera quemada
+    6: "#A0522D",  # Siena
+    7: "#8B4513",  # Marrón madera
+    8: "#D2691E",  # Chocolate
+    9: "#BC8F8F",  # Rosado madera
+    10: "#A52A2A"  # Marrón rojizo
 }
 
 # Colores profundos tipo "fieltro" para el fondo de las ventanas
