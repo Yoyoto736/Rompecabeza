@@ -14,10 +14,10 @@ from src.motor import RompecabezasMascara
 st.set_page_config(page_title="Solucionador de Rompecabezas", layout="centered")
 
 st.title("🧩 Solucionador (Edición Madera)")
-st.write("Selecciona el color y busca el encaje perfecto.")
+st.write("Configura el color que deseas dejar expuesto en el fondo y el motor buscará el encaje perfecto de los bloques.")
 
 # --- ESTADO DE LIMPIEZA ---
-color_seleccionado = st.selectbox("Color Objetivo:", ["Rojo", "Azul", "Amarillo", "Verde", "Morado", "Naranja"])
+color_seleccionado = st.selectbox("Selecciona el Color Objetivo:", ["Rojo", "Azul", "Amarillo", "Verde", "Morado", "Naranja"])
 
 if 'color_previo' not in st.session_state: st.session_state.color_previo = color_seleccionado
 if st.session_state.color_previo != color_seleccionado:
@@ -41,23 +41,25 @@ if 'motor_puzzle' not in st.session_state: st.session_state.motor_puzzle = Rompe
 motor = st.session_state.motor_puzzle
 
 if st.button("Buscar Soluciones", type="primary"):
-    with st.spinner("Calculando..."):
+    with st.spinner(f"Encajando bloques para el fondo {color_seleccionado}..."):
         soluciones, letra_obj = motor.resolver(color_seleccionado)
         if soluciones:
+            st.success(f"¡Búsqueda completada! Se encontraron **{len(soluciones)}** soluciones válidas.")
             st.session_state.soluciones = soluciones
             st.session_state.letra_obj = letra_obj
             st.session_state.indice_solucion = 0
         else:
-            st.error("No hay soluciones para este color.")
+            st.error(f"No se encontraron soluciones analíticas para el color {color_seleccionado}.")
             if 'soluciones' in st.session_state: del st.session_state.soluciones
 
 # --- RENDERIZADO ---
 if 'soluciones' in st.session_state and st.session_state.soluciones:
     soluciones = st.session_state.soluciones
     letra_obj = st.session_state.letra_obj
-    idx = st.number_input("Ver solución:", min_value=1, max_value=len(soluciones), value=st.session_state.indice_solucion + 1) - 1
+    idx = st.number_input(f"Ver solución (1 al {len(soluciones)}):", min_value=1, max_value=len(soluciones), value=st.session_state.indice_solucion + 1, step=1) - 1
     st.session_state.indice_solucion = idx
     
+    st.subheader("Tablero Físico")
     matriz_visual = motor.reconstruir_matriz_solucion(soluciones[idx], letra_obj)
     
     html_grid = f"""<div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; background-color: #1a1a1a; padding: 8px; border: 12px solid #c99b68; border-radius: 4px; box-shadow: 5px 5px 15px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(0,0,0,0.8); width: 100%; max-width: 500px; margin: 0 auto;">"""
@@ -71,10 +73,10 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
                 bg = PALETA_MADERA.get(val, "#d4a373")
                 html_grid += f"""<div style="background-color: {bg}; background-image: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.1) 100%); aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; border-radius: 2px; border: 1px solid #8b5a2b; box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.4), 2px 2px 3px rgba(0, 0, 0, 0.5);"><b style='color: #4a2e15; font-size: clamp(10px, 3.5vw, 16px); font-family: monospace; text-shadow: 1px 1px 0px rgba(255,255,255,0.2);'>{val}</b></div>"""
     html_grid += "</div>"
-    st.markdown(html_grid, unsafe_allow_html=True)
+    st.markdown(html_grid, unsafe_html=True)
             
-    with st.expander("Ver orden de ensamble"):
+    with st.expander("Ver orden de ensamble paso a paso"):
         for p_num, p in enumerate(soluciones[idx], 1):
-            st.write(f"Paso {p_num}: Pieza {p['pieza']} en (Fila: {p['coords'][0]+1}, Col: {p['coords'][1]+1})")
+            st.write(f"**Paso {p_num}:** Colocar la **Pieza {p['pieza']}** en (Fila: {p['coords'][0]+1}, Col: {p['coords'][1]+1}).")
 else:
-    st.info("Selecciona un color y presiona 'Buscar Soluciones'.")
+    st.info("Selecciona un color y presiona 'Buscar Soluciones' para iniciar.")
