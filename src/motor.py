@@ -4,7 +4,8 @@ from src.configuracion import TABLERO_COLORES, PIEZAS_BASE
 
 class RompecabezasMascara:
     def __init__(self):
-        self.tablero_colores = TABLERO_COLORES
+        # Aseguramos que la matriz de configuración se cargue limpia
+        self.tablero_colores = np.array(TABLERO_COLORES)
         self.piezas_formas = self._inicializar_piezas()
 
     def _inicializar_piezas(self):
@@ -28,49 +29,59 @@ class RompecabezasMascara:
                 unicas.append(t)
         return unicas
 
-    def _puede_colocarse(self, pieza, tablero_piezas, color_objetivo, fila, col):
+    def _puede_colocarse(self, pieza, tablero_piezas, letra_objetivo, fila, col):
         h, w = pieza.shape
         # 1. Validar límites físicos del tablero
         if fila < 0 or col < 0 or fila + h > 8 or col + w > 8:
             return False
         
-        # 2. Validar colisiones celda por celda
+        # 2. Validar colisiones y restricciones de color celda por celda
         for i in range(h):
             for j in range(w):
                 if pieza[i][j] == 1:
-                    # Si ya hay otra pieza encima
+                    # Si ya hay otra pieza física encima
                     if tablero_piezas[fila + i][col + j] != 0:
                         return False
-                    # Si interfiere con el color objetivo expuesto
-                    if self.tablero_colores[fila + i][col + j] == color_objetivo:
+                    # Restricción sagrada: Si la casilla es del color objetivo, DEBE quedar vacía
+                    if self.tablero_colores[fila + i][col + j] == letra_objetivo:
                         return False
         return True
 
-    def _tiene_huecos_muertos(self, tablero_piezas, color_objetivo):
-        """Poda activa: si queda una celda vacía aislada que no es el color objetivo, abortar."""
+    def _tiene_huecos_muertos(self, tablero_piezas, letra_objetivo):
+        """Poda matemática: si queda un espacio vacío aislado que no es ventana, abortar."""
         for f in range(8):
             for c in range(8):
-                if tablero_piezas[f][c] == 0 and self.tablero_colores[f][c] != color_objetivo:
+                if tablero_piezas[f][c] == 0 and self.tablero_colores[f][c] != letra_objetivo:
                     vecinos = 0
-                    if f > 0 and (tablero_piezas[f-1][c] == 0 or self.tablero_colores[f-1][c] == color_objetivo): vecinos += 1
-                    if f < 7 and (tablero_piezas[f+1][c] == 0 or self.tablero_colores[f+1][c] == color_objetivo): vecinos += 1
-                    if c > 0 and (tablero_piezas[f][c-1] == 0 or self.tablero_colores[f][c-1] == color_objetivo): vecinos += 1
-                    if c < 7 and (tablero_piezas[f][c+1] == 0 or self.tablero_colores[f][c+1] == color_objetivo): vecinos += 1
+                    if f > 0 and (tablero_piezas[f-1][c] == 0 or self.tablero_colores[f-1][c] == letra_objetivo): vecinos += 1
+                    if f < 7 and (tablero_piezas[f+1][c] == 0 or self.tablero_colores[f+1][c] == letra_objetivo): vecinos += 1
+                    if c > 0 and (tablero_piezas[f][c-1] == 0 or self.tablero_colores[f][c-1] == letra_objetivo): vecinos += 1
+                    if c < 7 and (tablero_piezas[f][c+1] == 0 or self.tablero_colores[f][c+1] == letra_objetivo): vecinos += 1
                     
                     if vecinos == 0:
                         return True
         return False
 
-    def resolver(self, color_objetivo):
-        # Matriz de control real e independiente
+    def resolver(self, nombre_color):
+        # Mapeo del string de Streamlit a las iniciales reales de tu matriz corregida
+        mapeo_letras = {
+            'Rojo': 'R',
+            'Azul': 'A',
+            'Amarillo': 'Y',
+            'Verde': 'V',
+            'Morado': 'M',
+            'Naranja': 'O' # Ajusta esta letra si usaste otra en tu archivo para el sexto color
+        }
+        letra_objetivo = mapeo_letras.get(nombre_color, 'A')
+        
         tablero_piezas = np.zeros((8, 8), dtype=int)
         soluciones = []
         piezas_usadas = set()
         
-        self._backtracking(tablero_piezas, color_objetivo, piezas_usadas, soluciones, [])
-        return soluciones
+        self._backtracking(tablero_piezas, letra_objetivo, piezas_usadas, soluciones, [])
+        return soluciones, letra_objetivo
 
-    def _backtracking(self, tablero_piezas, color_objetivo, piezas_usadas, soluciones, historial):
+    def _backtracking(self, tablero_piezas, letra_objetivo, piezas_usadas, soluciones, historial):
         if len(soluciones) >= 5:
             return
 
@@ -78,15 +89,15 @@ class RompecabezasMascara:
             soluciones.append(copy.deepcopy(historial))
             return
 
-        if self._tiene_huecos_muertos(tablero_piezas, color_objetivo):
+        if self._tiene_huecos_muertos(tablero_piezas, letra_objetivo):
             return
         
-        # Encontrar la primera celda vacía secuencial que deba ser rellenada por madera
+        # Buscar la primera celda vacía secuencial que no deba quedar expuesta
         fila_vacia, col_vacia = -1, -1
         encontrado = False
         for f in range(8):
             for c in range(8):
-                if tablero_piezas[f][c] == 0 and self.tablero_colores[f][c] != color_objetivo:
+                if tablero_piezas[f][c] == 0 and self.tablero_colores[f][c] != letra_objetivo:
                     fila_vacia, col_vacia = f, c
                     encontrado = True
                     break
@@ -108,8 +119,8 @@ class RompecabezasMascara:
                             f_orig = fila_vacia - pr_f
                             c_orig = col_vacia - pr_c
                             
-                            if self._puede_colocarse(p, tablero_piezas, color_objetivo, f_orig, c_orig):
-                                # COLOCACIÓN DIRECTA MODIFICANDO LA MATRIZ ORIGINAL
+                            if self._puede_colocarse(p, tablero_piezas, letra_objetivo, f_orig, c_orig):
+                                # Colocación real directa
                                 for i in range(h):
                                     for j in range(w):
                                         if p[i][j] == 1:
@@ -122,10 +133,9 @@ class RompecabezasMascara:
                                     'matriz': p.tolist()
                                 })
                                 
-                                # Avanzar recursión
-                                self._backtracking(tablero_piezas, color_objetivo, piezas_usadas, soluciones, historial)
+                                self._backtracking(tablero_piezas, letra_objetivo, piezas_usadas, soluciones, historial)
                                 
-                                # DESHACER LA JUGADA DIRECTAMENTE
+                                # Deshacer jugada
                                 piezas_usadas.remove(idx_pieza)
                                 historial.pop()
                                 for i in range(h):
@@ -133,10 +143,11 @@ class RompecabezasMascara:
                                         if p[i][j] == 1:
                                             tablero_piezas[f_orig + i][c_orig + j] = 0
 
-    def reconstruir_matriz_solucion(self, solucion):
+    def reconstruir_matriz_solucion(self, solucion, letra_objetivo):
+        # Inicializar todo el tablero con fondo -1 (vacio)
         matriz_visual = np.ones((8, 8), dtype=int) * -1
         
-        # Pintar las piezas fijas calculadas por el árbol
+        # Pintar las 10 piezas calculadas por el árbol
         for paso in solucion:
             p_id = paso['pieza']
             f, c = paso['coords']
@@ -148,11 +159,10 @@ class RompecabezasMascara:
                     if forma[i][j] == 1:
                         matriz_visual[f + i][c + j] = p_id
                         
-        # Sincronizar celdas vacías con las ventanas correspondientes
+        # Sincronizar de forma estricta las 4 ventanas del color objetivo
         for f in range(8):
             for c in range(8):
-                if matriz_visual[f][c] == -1:
-                    if self.tablero_colores[f][c] != '0':
-                        matriz_visual[f][c] = 0
+                if self.tablero_colores[f][c] == letra_objetivo:
+                    matriz_visual[f][c] = 0  # 0 indica ventana con destellos (✨) en el frontend
                         
         return matriz_visual
