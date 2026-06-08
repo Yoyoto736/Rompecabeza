@@ -59,7 +59,7 @@ PALETA_COLORES = {
     10: "#34495e"  # Pieza 10 - Asfalto / Azul Grisáceo
 }
 
-# Inicialización del motor
+# Inicialización del motor en el estado de la sesión
 if 'motor_puzzle' not in st.session_state:
     st.session_state.motor_puzzle = RompecabezasMascara()
 
@@ -68,13 +68,15 @@ motor = st.session_state.motor_puzzle
 # Botón para ejecutar el algoritmo
 if st.button("Buscar Soluciones", type="primary"):
     with st.spinner(f"Analizando combinaciones para despejar el color {color_seleccionado}..."):
-        # Convertimos el string al caracter correspondiente ('R', 'A', etc.) antes de pasarlo al motor
+        # Convertimos el string al caracter correspondiente ('R', 'A', etc.)
         letra_interna = MAPEO_LETRAS[color_seleccionado]
-        soluciones = motor.resolver(letra_interna)
         
-        if soluciones:
-            st.success(f"¡Búsqueda completada! Se encontraron **{len(soluciones)}** soluciones válidas.")
-            st.session_state.soluciones = soluciones
+        # Corrección del TypeError: Tu motor devuelve únicamente la lista de soluciones
+        lista_soluciones = motor.resolver(letra_interna)
+        
+        if lista_soluciones and len(lista_soluciones) > 0:
+            st.success(f"¡Búsqueda completada! Se encontraron **{len(lista_soluciones)}** soluciones válidas.")
+            st.session_state.soluciones = lista_soluciones
             st.session_state.indice_solucion = 0
         else:
             st.error(
@@ -106,7 +108,7 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
         "Las celdas marcadas con ✨ corresponden a las ventanas del color expuesto."
     )
     
-    # Llama a la función tal cual está en el script de motor que me compartiste
+    # Ejecución segura alineada al motor exacto
     matriz_visual = motor.reconstruir_matriz_solucion(soluciones[idx])
     
     # Renderizado de la cuadrícula con márgenes y sombras tridimensionales
@@ -123,7 +125,7 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
                 contenido_html = f"<span style='color: white; font-size: 16px; font-weight: bold;'>{val_celda}</span>"
                 border_style = "border: 1px solid rgba(0,0,0,0.15);"
             
-            # CSS Restaurado: Controla el espaciado exacto de mosaicos independientes (margin: 4px 2px)
+            # CSS Restaurado: Mantiene el espaciado exacto de mosaicos independientes (margin: 4px 2px)
             cols[c].markdown(
                 f"""
                 <div style="
