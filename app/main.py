@@ -21,7 +21,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# GESTIÓN DE ESTADO INMUTABLE
+# GESTIÓN DE ESTADO INMUTABLE (Solo guardamos datos puros, no instancias de objetos)
 if 'lista_soluciones' not in st.session_state:
     st.session_state.lista_soluciones = None
 if 'indice_solucion' not in st.session_state:
@@ -41,7 +41,7 @@ color_seleccionado = st.selectbox(
     ["Rojo", "Azul", "Amarillo", "Verde", "Morado", "Naranja"]
 )
 
-# Si el usuario cambia el color en el selector, limpiamos el estado inmediatamente
+# Si cambia el color, limpiamos las soluciones previas de inmediato
 if color_seleccionado != st.session_state.color_previo:
     st.session_state.lista_soluciones = None
     st.session_state.indice_solucion = 0
@@ -73,19 +73,14 @@ PALETA_COLORES = {
     10: "#34495e"  # Pieza 10 - Asfalto / Azul Grisáceo
 }
 
-# Inicialización del motor analítico
-if 'motor_puzzle' not in st.session_state:
-    st.session_state.motor_puzzle = RompecabezasMascara()
-
-motor = st.session_state.motor_puzzle
-
-# Ejecución del motor por el botón
+# Botón para ejecutar el algoritmo
 if st.button("Buscar Soluciones", type="primary"):
     with st.spinner(f"Analizando combinaciones para despejar el color {color_seleccionado}..."):
         letra_interna = MAPEO_LETRAS[color_seleccionado]
         
-        # Obtenemos las soluciones puras del motor
-        soluciones_calculadas = motor.resolver(letra_interna)
+        # Instanciamos un motor fresco exclusivamente para la búsqueda por backtracking
+        motor_busqueda = RompecabezasMascara()
+        soluciones_calculadas = motor_busqueda.resolver(letra_interna)
         
         if soluciones_calculadas and len(soluciones_calculadas) > 0:
             st.session_state.lista_soluciones = soluciones_calculadas
@@ -125,11 +120,12 @@ if st.session_state.lista_soluciones is not None:
         
         solucion_actual = soluciones[idx]
         
-        # EL FILTRO DEFINITIVO: Solo ingresa si es una lista Y contiene pasos reales calculados por el backtracking
         if isinstance(solucion_actual, list) and len(solucion_actual) > 0:
             
-            # Reconstrucción segura de la matriz
-            matriz_visual = motor.reconstruir_matriz_solucion(solucion_actual)
+            # SOLUCIÓN MAESTRA: Instanciamos un objeto motor completamente limpio y nuevo 
+            # justo antes de dibujar para evitar mutaciones de tipo de datos residuales.
+            motor_render = RompecabezasMascara()
+            matriz_visual = motor_render.reconstruir_matriz_solucion(solucion_actual)
             
             # Estilo CSS para ajustar las columnas de Streamlit al formato mosaico compacto
             st.markdown(
@@ -157,7 +153,7 @@ if st.session_state.lista_soluciones is not None:
                         contenido_html = f"<span style='color: white; font-size: 16px; font-weight: bold;'>{val_celda}</span>"
                         border_style = "border: 1px solid rgba(0,0,0,0.15);"
                     
-                    # Look original: margin compacto (3px 1px), esquinas redondeadas y doble sombra de relieve
+                    # Look original compacto con doble sombra de relieve
                     cols[c].markdown(
                         f"""
                         <div style="
