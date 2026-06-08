@@ -27,16 +27,26 @@ st.write(
     "buscará todas las combinaciones exactas."
 )
 
-# Selector de Color Objetivo
+# 1. Selector de interfaz en Español
 color_seleccionado = st.selectbox(
     "Selecciona el Color Objetivo:",
     ["Rojo", "Azul", "Amarillo", "Verde", "Morado", "Naranja"]
 )
 
-# Recuperamos la paleta de colores original, viva y contrastada de las soluciones previas
+# 2. Mapeo estricto hacia los caracteres del TABLERO_COLORES de tu motor
+MAPEO_LETRAS = {
+    "Rojo": "R",
+    "Azul": "A",
+    "Amarillo": "Y",
+    "Verde": "V",
+    "Morado": "M",
+    "Naranja": "N"
+}
+
+# Paleta de colores viva con la estética de botones en relieve original
 PALETA_COLORES = {
     -1: "#2e2e2e", # Vacío / Fondo neutro
-    0: "#ffffff",  # Ventana libre (Fondo blanco limpio para resaltar los destellos)
+    0: "#ffffff",  # Ventana libre expuesta (Fondo blanco limpio para resaltar destellos)
     1: "#ff4d4d",  # Pieza 1 - Rojo Coral
     2: "#2ecc71",  # Pieza 2 - Verde Esmeralda
     3: "#3498db",  # Pieza 3 - Azul Brillante
@@ -46,10 +56,10 @@ PALETA_COLORES = {
     7: "#e67e22",  # Pieza 7 - Naranja Otoño
     8: "#f39c12",  # Pieza 8 - Ámbar / Oro
     9: "#e74c3c",  # Pieza 9 - Bermellón
-    10: "#34495e"  # Pieza 10 - Asfalto / Azul Grisáceo oscurecido
+    10: "#34495e"  # Pieza 10 - Asfalto / Azul Grisáceo
 }
 
-# Inicialización del motor en sesión
+# Inicialización del motor
 if 'motor_puzzle' not in st.session_state:
     st.session_state.motor_puzzle = RompecabezasMascara()
 
@@ -58,12 +68,13 @@ motor = st.session_state.motor_puzzle
 # Botón para ejecutar el algoritmo
 if st.button("Buscar Soluciones", type="primary"):
     with st.spinner(f"Analizando combinaciones para despejar el color {color_seleccionado}..."):
-        soluciones, letra_obj = motor.resolver(color_seleccionado)
+        # Convertimos el string al caracter correspondiente ('R', 'A', etc.) antes de pasarlo al motor
+        letra_interna = MAPEO_LETRAS[color_seleccionado]
+        soluciones = motor.resolver(letra_interna)
         
         if soluciones:
             st.success(f"¡Búsqueda completada! Se encontraron **{len(soluciones)}** soluciones válidas.")
             st.session_state.soluciones = soluciones
-            st.session_state.letra_obj = letra_obj
             st.session_state.indice_solucion = 0
         else:
             st.error(
@@ -73,10 +84,9 @@ if st.button("Buscar Soluciones", type="primary"):
             if 'soluciones' in st.session_state:
                 del st.session_state.soluciones
 
-# Renderizado gráfico con la estética original de tarjetas espaciadas
+# Renderizado gráfico con la estética original de tarjetas espaciadas en relieve
 if 'soluciones' in st.session_state and st.session_state.soluciones:
     soluciones = st.session_state.soluciones
-    letra_obj = st.session_state.letra_obj
     
     st.write("---")
     
@@ -96,9 +106,10 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
         "Las celdas marcadas con ✨ corresponden a las ventanas del color expuesto."
     )
     
-    matriz_visual = motor.reconstruir_matriz_solucion(soluciones[idx], letra_obj)
+    # Llama a la función tal cual está en el script de motor que me compartiste
+    matriz_visual = motor.reconstruir_matriz_solucion(soluciones[idx])
     
-    # Renderizado de la cuadrícula con el CSS original de tarjetas tridimensionales separadas
+    # Renderizado de la cuadrícula con márgenes y sombras tridimensionales
     for f in range(8):
         cols = st.columns(8)
         for c in range(8):
@@ -107,12 +118,12 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
             
             if val_celda == 0:
                 contenido_html = "<span style='color: #e67e22; font-size: 20px; font-weight: bold;'>✨</span>"
-                border_style = "border: 2px dashed #e74c3c;" # Borde rojo discontinuo original
+                border_style = "border: 2px dashed #e74c3c;" # Borde discontinuo rojo original
             else:
                 contenido_html = f"<span style='color: white; font-size: 16px; font-weight: bold;'>{val_celda}</span>"
                 border_style = "border: 1px solid rgba(0,0,0,0.15);"
             
-            # CSS restaurado: incluye los márgenes externos (margin: 4px), esquinas redondeadas suavizadas y sombreado sutil inferior
+            # CSS Restaurado: Controla el espaciado exacto de mosaicos independientes (margin: 4px 2px)
             cols[c].markdown(
                 f"""
                 <div style="
