@@ -2,6 +2,7 @@ import sys
 import os
 
 # --- BLINDAJE DE RUTAS PARA STREAMLIT CLOUD ---
+# Detectamos la ubicación del archivo actual y forzamos la inclusión de la raíz en sys.path
 dir_actual = os.path.dirname(os.path.abspath(__file__))
 dir_raiz = os.path.abspath(os.path.join(dir_actual, '..'))
 
@@ -27,29 +28,29 @@ st.write(
     "buscará todas las combinaciones exactas."
 )
 
-# 1. Selector de Color Objetivo
+# 1. Selector de Color Objetivo (Coincide con las llaves del diccionario en el motor)
 color_seleccionado = st.selectbox(
     "Selecciona el Color Objetivo:",
     ["Rojo", "Azul", "Amarillo", "Verde", "Morado", "Naranja"]
 )
 
-# PALETA DE COLORES (Atributos visuales extraídos)
+# Diccionario de colores hexadecimales atractivos para cada pieza/bloque
 PALETA_COLORES = {
-    -1: "#1E1E1E", # Fondo oscuro
-    0:  "#FFFFFF", # Celda objetivo (Vaciada/Mostrada)
-    1:  "#FF5733", # Pieza 1
-    2:  "#33FF57", # Pieza 2
-    3:  "#3357FF", # Pieza 3
-    4:  "#F3FF33", # Pieza 4
-    5: "#9B59B6",  # Pieza 5
-    6: "#1ABC9C",  # Pieza 6
-    7: "#E67E22",  # Pieza 7
-    8: "#F1C40F",  # Pieza 8
-    9: "#E74C3C",  # Pieza 9
-    10: "#34495E"  # Pieza 10
+    -1: "#1e1e1e", # Vacío / Fondo oscuro
+    0: "#ffffff",  # Ventana objetivo expuesta (Blanco puro para resaltar destellos)
+    1: "#ff4b4b",  # Pieza 1 - Rojo
+    2: "#4bfa4b",  # Pieza 2 - Verde brillante
+    3: "#1f77b4",  # Pieza 3 - Azul marino
+    4: "#f1c40f",  # Pieza 4 - Amarillo
+    5: "#9b59b6",  # Pieza 5 - Morado
+    6: "#1abc9c",  # Pieza 6 - Turquesa
+    7: "#e67e22",  # Pieza 7 - Naranja
+    8: "#f39c12",  # Pieza 8 - Oro / Ocre
+    9: "#e74c3c",  # Pieza 9 - Alizarina / Coral
+    10: "#34495e"  # Pieza 10 - Gris Azulado / Madera oscura
 }
 
-# Inicialización directa del motor
+# Inicialización directa del motor (Sin @st.cache_resource para evitar congelamientos en la RAM)
 if 'motor_puzzle' not in st.session_state:
     st.session_state.motor_puzzle = RompecabezasMascara()
 
@@ -58,10 +59,13 @@ motor = st.session_state.motor_puzzle
 # Botón para ejecutar el algoritmo de backtracking
 if st.button("Buscar Soluciones", type="primary"):
     with st.spinner(f"Analizando combinaciones para despejar el color {color_seleccionado}..."):
+        # El motor modificado ahora devuelve las soluciones y la letra interna calculada ('R', 'A', etc.)
         soluciones, letra_obj = motor.resolver(color_seleccionado)
         
         if soluciones:
             st.success(f"¡Búsqueda completada! Se encontraron **{len(soluciones)}** soluciones válidas.")
+            
+            # Guardar resultados en el estado de la sesión para la navegación
             st.session_state.soluciones = soluciones
             st.session_state.letra_obj = letra_obj
             st.session_state.indice_solucion = 0
@@ -73,13 +77,14 @@ if st.button("Buscar Soluciones", type="primary"):
             if 'soluciones' in st.session_state:
                 del st.session_state.soluciones
 
-# Control de navegación y renderizado de mapas
+# Control de navegación y renderizado de mapas si existen soluciones calculadas
 if 'soluciones' in st.session_state and st.session_state.soluciones:
     soluciones = st.session_state.soluciones
     letra_obj = st.session_state.letra_obj
     
     st.write("---")
     
+    # Selector numérico para iterar entre las soluciones encontradas (Máximo 5)
     idx = st.number_input(
         f"Ver solución (1 al {len(soluciones)}):",
         min_value=1,
@@ -93,3 +98,51 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
     st.subheader("Mapa de Colocación de Piezas")
     st.markdown(
         "Los números del 1 al 10 te indican qué pieza va en cada posición. "
+        "Las celdas marcadas con ✨ corresponden a las ventanas del color expuesto."
+    )
+    
+    # Reconstruir la matriz visual forzando las ventanas del color objetivo basado en la letra real
+    matriz_visual = motor.reconstruir_matriz_solucion(soluciones[idx], letra_obj)
+    
+    # Renderizado de la cuadrícula de 8x8 usando contenedores nativos estilizados con HTML/CSS
+    for f in range(8):
+        cols = st.columns(8)
+        for c in range(8):
+            val_celda = matriz_visual[f][c]
+            bg_color = PALETA_COLORES.get(val_celda, "#1e1e1e")
+            
+            # Formatear el contenido de la celda (Texto numérico o Destello indicador)
+            if val_celda == 0:
+                contenido_html = "<span style='color: #d35400; font-size: 18px;'>✨</span>"
+                border_style = "border: 2px dashed #ff4b4b;" # Borde distintivo para ventanas libres
+            else:
+                contenido_html = f"<b style='color: white; font-size: 16px;'>{val_celda}</b>"
+                border_style = "border: 1px solid #444444;"
+            
+            # Inyección de estilo CSS Inline para garantizar uniformidad geométrica en cualquier pantalla
+            cols[c].markdown(
+                f"""
+                <div style="
+                    background-color: {bg_color};
+                    height: 55px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    {border_style}
+                    border-radius: 4px;
+                    margin: 2px 0;
+                    box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+                ">
+                    {contenido_html}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
+    # Sección desplegable opcional para auditar la secuencia exacta de armado mecánico
+    with st.expander("Ver orden de ensamble paso a paso"):
+        for paso_num, paso in enumerate(soluciones[idx], 1):
+            st.write(
+                f"**Paso {paso_num}:** Colocar la **Pieza {paso['pieza']}** "
+                f"en la coordenada de origen del tablero (Fila: {paso['coords'][0] + 1}, Columna: {paso['coords'][1] + 1})."
+            )
