@@ -21,11 +21,13 @@ st.set_page_config(
     layout="centered"
 )
 
-# GESTIÓN DE ESTADO INMUTABLE (Evita que los datos se evaporen al usar los botones)
+# GESTIÓN DE ESTADO INMUTABLE
 if 'lista_soluciones' not in st.session_state:
     st.session_state.lista_soluciones = None
 if 'indice_solucion' not in st.session_state:
     st.session_state.indice_solucion = 0
+if 'color_previo' not in st.session_state:
+    st.session_state.color_previo = "Rojo"
 
 st.title("🧩 Solucionador del Rompecabezas de Máscara")
 st.write(
@@ -38,6 +40,12 @@ color_seleccionado = st.selectbox(
     "Selecciona el Color Objetivo:",
     ["Rojo", "Azul", "Amarillo", "Verde", "Morado", "Naranja"]
 )
+
+# Si el usuario cambia el color en el selector, limpiamos el estado inmediatamente
+if color_seleccionado != st.session_state.color_previo:
+    st.session_state.lista_soluciones = None
+    st.session_state.indice_solucion = 0
+    st.session_state.color_previo = color_seleccionado
 
 # Mapeo estricto hacia los caracteres del TABLERO_COLORES del motor
 MAPEO_LETRAS = {
@@ -115,8 +123,9 @@ if st.session_state.lista_soluciones is not None:
             "Las celdas marcadas con ✨ corresponden a las ventanas del color expuesto."
         )
         
-        # FILTRO DE SEGURIDAD ABSOLUTO: Verificamos tipo y estructura antes de entrar al motor
         solucion_actual = soluciones[idx]
+        
+        # EL FILTRO DEFINITIVO: Solo ingresa si es una lista Y contiene pasos reales calculados por el backtracking
         if isinstance(solucion_actual, list) and len(solucion_actual) > 0:
             
             # Reconstrucción segura de la matriz
@@ -175,4 +184,4 @@ if st.session_state.lista_soluciones is not None:
                         f"en la coordenada de origen del tablero (Fila: {paso['coords'][0] + 1}, Columna: {paso['coords'][1] + 1})."
                     )
         else:
-            st.warning("La estructura de la solución guardada no es válida. Por favor, recalcula de nuevo.")
+            st.info("Haz clic en 'Buscar Soluciones' para desplegar la cuadrícula de este color.")
