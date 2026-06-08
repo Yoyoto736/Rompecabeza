@@ -21,23 +21,6 @@ st.set_page_config(
     layout="centered"
 )
 
-# Estilos CSS Globales: Creamos el marco de madera y eliminamos separaciones nativas
-st.markdown("""
-    <style>
-    [data-testid="column"] {
-        padding: 0px !important;
-    }
-    .stColumns {
-        gap: 0px !important;
-        background-color: #1a1a1a; /* Fondo oscuro detrás de las piezas */
-        padding: 8px; /* Espacio interior entre piezas y marco */
-        border: 18px solid #c99b68; /* Marco de madera grueso */
-        border-radius: 4px;
-        box-shadow: 5px 5px 15px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(0,0,0,0.8);
-    }
-    </style>
-""", unsafe_allow_html=True)
-
 st.title("🧩 Solucionador de Rompecabezas (Edición Madera)")
 st.write(
     "Configura el color que deseas dejar expuesto en el fondo y el motor "
@@ -49,7 +32,7 @@ color_seleccionado = st.selectbox(
     ["Rojo", "Azul", "Amarillo", "Verde", "Morado", "Naranja"]
 )
 
-# Paleta de tonos de madera (Simula el roble/pino de la foto)
+# Paleta de tonos de madera
 PALETA_MADERA = {
     -1: "#1e1e1e",
     1: "#D4A373",
@@ -66,12 +49,12 @@ PALETA_MADERA = {
 
 # Colores profundos tipo "fieltro" para el fondo de las ventanas
 MAPA_COLOR_FONDO = {
-    "Rojo": "#8b0000",   # Rojo oscuro
-    "Azul": "#0b3b60",   # Azul marino (Como en tu foto)
-    "Amarillo": "#b8860b", # Dorado oscuro
-    "Verde": "#006400",  # Verde bosque
-    "Morado": "#4b0082", # Índigo
-    "Naranja": "#cc5500" # Naranja quemado
+    "Rojo": "#8b0000",
+    "Azul": "#0b3b60",
+    "Amarillo": "#b8860b",
+    "Verde": "#006400",
+    "Morado": "#4b0082",
+    "Naranja": "#cc5500"
 }
 color_ventana = MAPA_COLOR_FONDO.get(color_seleccionado, "#333333")
 
@@ -117,54 +100,72 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
     
     matriz_visual = motor.reconstruir_matriz_solucion(soluciones[idx], letra_obj)
     
-    # Renderizado de la cuadrícula simulando bloques de madera y agujeros
+    # --- CONSTRUCCIÓN DEL GRID HTML/CSS (Forzado a 8x8 en móviles y escritorio) ---
+    # Contenedor principal (El marco de madera)
+    html_grid = f"""
+    <div style="
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 2px;
+        background-color: #1a1a1a;
+        padding: 8px;
+        border: 12px solid #c99b68;
+        border-radius: 4px;
+        box-shadow: 5px 5px 15px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(0,0,0,0.8);
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+    ">
+    """
+    
+    # Generación de las 64 celdas
     for f in range(8):
-        cols = st.columns(8)
         for c in range(8):
             val_celda = matriz_visual[f][c]
             
             if val_celda == 0:
-                # Estilo de AGUJERO: Profundo, sin bordes, mostrando el color de fondo
-                estilo_html = f"""
+                # Estilo de AGUJERO
+                html_grid += f"""
                 <div style="
                     background-color: {color_ventana};
-                    height: 52px;
-                    margin: 1px;
+                    aspect-ratio: 1 / 1;
                     border-radius: 2px;
-                    box-shadow: inset 5px 5px 10px rgba(0,0,0,0.8), inset -2px -2px 5px rgba(0,0,0,0.5);
-                ">
-                </div>
+                    box-shadow: inset 4px 4px 8px rgba(0,0,0,0.8), inset -2px -2px 4px rgba(0,0,0,0.5);
+                "></div>
                 """
             else:
-                # Estilo de BLOQUE DE MADERA: Tonalidad roble, biselado recto y número grabado
+                # Estilo de BLOQUE DE MADERA
                 bg_color = PALETA_MADERA.get(val_celda, "#d4a373")
-                estilo_html = f"""
+                html_grid += f"""
                 <div style="
                     background-color: {bg_color};
                     background-image: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.1) 100%);
-                    height: 52px;
+                    aspect-ratio: 1 / 1;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     border-radius: 2px;
-                    margin: 1px;
                     border: 1px solid #8b5a2b;
-                    box-shadow: 
-                        inset 1px 1px 2px rgba(255, 255, 255, 0.4), 
-                        2px 2px 3px rgba(0, 0, 0, 0.5);
+                    box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.4), 2px 2px 3px rgba(0, 0, 0, 0.5);
                 ">
                     <b style='
                         color: #4a2e15; 
-                        font-size: 16px; 
+                        font-size: clamp(10px, 3.5vw, 16px); 
                         font-family: monospace;
                         text-shadow: 1px 1px 0px rgba(255,255,255,0.2);
+                        margin: 0;
+                        padding: 0;
                     '>
                         {val_celda}
                     </b>
                 </div>
                 """
-            
-            cols[c].markdown(estilo_html, unsafe_allow_html=True)
+                
+    # Cerrar el contenedor principal
+    html_grid += "</div>"
+    
+    # Renderizar todo el bloque en Streamlit
+    st.markdown(html_grid, unsafe_allow_html=True)
             
     with st.expander("Ver orden de ensamble paso a paso"):
         for paso_num, paso in enumerate(soluciones[idx], 1):
