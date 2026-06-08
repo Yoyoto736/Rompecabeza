@@ -44,6 +44,7 @@ if st.button("Buscar Soluciones", type="primary"):
     with st.spinner(f"Encajando bloques para el fondo {color_seleccionado}..."):
         soluciones, letra_obj = motor.resolver(color_seleccionado)
         if soluciones:
+            # --- MENSAJE DE CANTIDAD RESTAURADO ---
             st.success(f"¡Búsqueda completada! Se encontraron **{len(soluciones)}** soluciones válidas.")
             st.session_state.soluciones = soluciones
             st.session_state.letra_obj = letra_obj
@@ -56,24 +57,27 @@ if st.button("Buscar Soluciones", type="primary"):
 if 'soluciones' in st.session_state and st.session_state.soluciones:
     soluciones = st.session_state.soluciones
     letra_obj = st.session_state.letra_obj
+    
     idx = st.number_input(f"Ver solución (1 al {len(soluciones)}):", min_value=1, max_value=len(soluciones), value=st.session_state.indice_solucion + 1, step=1) - 1
     st.session_state.indice_solucion = idx
     
     st.subheader("Tablero Físico")
     matriz_visual = motor.reconstruir_matriz_solucion(soluciones[idx], letra_obj)
     
-    html_grid = f"""<div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; background-color: #1a1a1a; padding: 8px; border: 12px solid #c99b68; border-radius: 4px; box-shadow: 5px 5px 15px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(0,0,0,0.8); width: 100%; max-width: 500px; margin: 0 auto;">"""
+    # Construcción segura del string HTML
+    html_partes = [f'<div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; background-color: #1a1a1a; padding: 8px; border: 12px solid #c99b68; border-radius: 4px; box-shadow: 5px 5px 15px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(0,0,0,0.8); width: 100%; max-width: 500px; margin: 0 auto;">']
     
     for f in range(8):
         for c in range(8):
-            val = matriz_visual[f][c]
+            val = int(matriz_visual[f][c])
             if val == 0:
-                html_grid += f"""<div style="background-color: {color_ventana}; aspect-ratio: 1 / 1; border-radius: 2px; box-shadow: inset 4px 4px 8px rgba(0,0,0,0.8), inset -2px -2px 4px rgba(0,0,0,0.5);"></div>"""
+                html_partes.append(f'<div style="background-color: {color_ventana}; aspect-ratio: 1 / 1; border-radius: 2px; box-shadow: inset 4px 4px 8px rgba(0,0,0,0.8), inset -2px -2px 4px rgba(0,0,0,0.5);"></div>')
             else:
                 bg = PALETA_MADERA.get(val, "#d4a373")
-                html_grid += f"""<div style="background-color: {bg}; background-image: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.1) 100%); aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; border-radius: 2px; border: 1px solid #8b5a2b; box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.4), 2px 2px 3px rgba(0, 0, 0, 0.5);"><b style='color: #4a2e15; font-size: clamp(10px, 3.5vw, 16px); font-family: monospace; text-shadow: 1px 1px 0px rgba(255,255,255,0.2);'>{val}</b></div>"""
-    html_grid += "</div>"
-    st.markdown(html_grid, unsafe_html=True)
+                html_partes.append(f'<div style="background-color: {bg}; background-image: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.1) 100%); aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; border-radius: 2px; border: 1px solid #8b5a2b; box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.4), 2px 2px 3px rgba(0, 0, 0, 0.5);"><b style="color: #4a2e15; font-size: clamp(10px, 3.5vw, 16px); font-family: monospace; text-shadow: 1px 1px 0px rgba(255,255,255,0.2);">{val}</b></div>')
+    
+    html_partes.append('</div>')
+    st.markdown("".join(html_partes), unsafe_html=True)
             
     with st.expander("Ver orden de ensamble paso a paso"):
         for p_num, p in enumerate(soluciones[idx], 1):
