@@ -35,16 +35,8 @@ color_seleccionado = st.selectbox(
 # Paleta de tonos de madera
 PALETA_MADERA = {
     -1: "#1e1e1e",
-    1: "#D4A373",
-    2: "#D8A878",
-    3: "#CE9D6D",
-    4: "#DAAA7A",
-    5: "#D09F6F",
-    6: "#D6A676",
-    7: "#CC9B6B",
-    8: "#D2A272",
-    9: "#D9A979",
-    10: "#CFA070"
+    1: "#D4A373", 2: "#D8A878", 3: "#CE9D6D", 4: "#DAAA7A", 5: "#D09F6F",
+    6: "#D6A676", 7: "#CC9B6B", 8: "#D2A272", 9: "#D9A979", 10: "#CFA070"
 }
 
 # Colores profundos tipo "fieltro" para el fondo de las ventanas
@@ -100,66 +92,20 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
     
     matriz_visual = motor.reconstruir_matriz_solucion(soluciones[idx], letra_obj)
     
-    # --- CONSTRUCCIÓN DEL GRID HTML/CSS (Forzado a 8x8 en móviles y escritorio) ---
-    # Contenedor principal (El marco de madera)
-    html_grid = f"""
-    <div style="
-        display: grid;
-        grid-template-columns: repeat(8, 1fr);
-        gap: 2px;
-        background-color: #1a1a1a;
-        padding: 8px;
-        border: 12px solid #c99b68;
-        border-radius: 4px;
-        box-shadow: 5px 5px 15px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(0,0,0,0.8);
-        width: 100%;
-        max-width: 500px;
-        margin: 0 auto;
-    ">
-    """
+    # --- CONSTRUCCIÓN DEL GRID HTML/CSS SIN SANGRÍAS ---
+    # Contenedor principal
+    html_grid = f"""<div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; background-color: #1a1a1a; padding: 8px; border: 12px solid #c99b68; border-radius: 4px; box-shadow: 5px 5px 15px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(0,0,0,0.8); width: 100%; max-width: 500px; margin: 0 auto;">"""
     
-    # Generación de las 64 celdas
+    # Generación de las 64 celdas (Todo en una línea por celda para evitar que Markdown lo tome como código)
     for f in range(8):
         for c in range(8):
             val_celda = matriz_visual[f][c]
             
             if val_celda == 0:
-                # Estilo de AGUJERO
-                html_grid += f"""
-                <div style="
-                    background-color: {color_ventana};
-                    aspect-ratio: 1 / 1;
-                    border-radius: 2px;
-                    box-shadow: inset 4px 4px 8px rgba(0,0,0,0.8), inset -2px -2px 4px rgba(0,0,0,0.5);
-                "></div>
-                """
+                html_grid += f"""<div style="background-color: {color_ventana}; aspect-ratio: 1 / 1; border-radius: 2px; box-shadow: inset 4px 4px 8px rgba(0,0,0,0.8), inset -2px -2px 4px rgba(0,0,0,0.5);"></div>"""
             else:
-                # Estilo de BLOQUE DE MADERA
                 bg_color = PALETA_MADERA.get(val_celda, "#d4a373")
-                html_grid += f"""
-                <div style="
-                    background-color: {bg_color};
-                    background-image: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.1) 100%);
-                    aspect-ratio: 1 / 1;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    border-radius: 2px;
-                    border: 1px solid #8b5a2b;
-                    box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.4), 2px 2px 3px rgba(0, 0, 0, 0.5);
-                ">
-                    <b style='
-                        color: #4a2e15; 
-                        font-size: clamp(10px, 3.5vw, 16px); 
-                        font-family: monospace;
-                        text-shadow: 1px 1px 0px rgba(255,255,255,0.2);
-                        margin: 0;
-                        padding: 0;
-                    '>
-                        {val_celda}
-                    </b>
-                </div>
-                """
+                html_grid += f"""<div style="background-color: {bg_color}; background-image: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.1) 100%); aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; border-radius: 2px; border: 1px solid #8b5a2b; box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.4), 2px 2px 3px rgba(0, 0, 0, 0.5);"><b style='color: #4a2e15; font-size: clamp(10px, 3.5vw, 16px); font-family: monospace; text-shadow: 1px 1px 0px rgba(255,255,255,0.2); margin: 0; padding: 0;'>{val_celda}</b></div>"""
                 
     # Cerrar el contenedor principal
     html_grid += "</div>"
