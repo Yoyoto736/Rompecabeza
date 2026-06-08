@@ -2,7 +2,6 @@ import sys
 import os
 
 # --- BLINDAJE DE RUTAS PARA STREAMLIT CLOUD ---
-# Detectamos la ubicación del archivo actual y forzamos la inclusión de la raíz en sys.path
 dir_actual = os.path.dirname(os.path.abspath(__file__))
 dir_raiz = os.path.abspath(os.path.join(dir_actual, '..'))
 
@@ -22,7 +21,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Inyección de estilos CSS globales para unificar la rejilla eliminando márgenes nativos
+# Inyección de estilos CSS globales para compactar la rejilla
 st.markdown("""
     <style>
     [data-testid="column"] {
@@ -30,6 +29,10 @@ st.markdown("""
     }
     .stColumns {
         gap: 0px !important;
+        background-color: #222; /* Color de fondo de la bandeja/tablero base */
+        padding: 4px;
+        border-radius: 8px;
+        box-shadow: inset 0px 0px 10px rgba(0,0,0,0.8);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -40,44 +43,50 @@ st.write(
     "buscará todas las combinaciones exactas."
 )
 
-# 1. Selector de Color Objetivo (Coincide con las llaves del diccionario en el motor)
+# 1. Selector de Color Objetivo
 color_seleccionado = st.selectbox(
     "Selecciona el Color Objetivo:",
     ["Rojo", "Azul", "Amarillo", "Verde", "Morado", "Naranja"]
 )
 
-# Diccionario de colores hexadecimales atractivos para cada pieza/bloque
+# Diccionario de colores hexadecimales para las piezas de plástico
 PALETA_COLORES = {
-    -1: "#1e1e1e", # Vacío / Fondo oscuro
-    0: "#ffffff",  # Ventana objetivo expuesta (Blanco puro para resaltar destellos)
-    1: "#ff4b4b",  # Pieza 1 - Rojo
-    2: "#4bfa4b",  # Pieza 2 - Verde brillante
-    3: "#1f77b4",  # Pieza 3 - Azul marino
+    -1: "#1e1e1e",
+    1: "#e74c3c",  # Pieza 1 - Rojo
+    2: "#2ecc71",  # Pieza 2 - Verde
+    3: "#3498db",  # Pieza 3 - Azul
     4: "#f1c40f",  # Pieza 4 - Amarillo
     5: "#9b59b6",  # Pieza 5 - Morado
     6: "#1abc9c",  # Pieza 6 - Turquesa
     7: "#e67e22",  # Pieza 7 - Naranja
-    8: "#f39c12",  # Pieza 8 - Oro / Ocre
-    9: "#e74c3c",  # Pieza 9 - Alizarina / Coral
-    10: "#34495e"  # Pieza 10 - Gris Azulado / Madera oscura
+    8: "#f39c12",  # Pieza 8 - Ocre
+    9: "#c0392b",  # Pieza 9 - Rojo oscuro
+    10: "#34495e"  # Pieza 10 - Gris oscuro
 }
 
-# Inicialización directa del motor (Sin @st.cache_resource para evitar congelamientos en la RAM)
+# Mapeo del color real que se verá a través de las ventanas
+MAPA_COLOR_FONDO = {
+    "Rojo": "#ff4b4b",
+    "Azul": "#1f77b4",
+    "Amarillo": "#f1c40f",
+    "Verde": "#4bfa4b",
+    "Morado": "#9b59b6",
+    "Naranja": "#e67e22"
+}
+color_ventana = MAPA_COLOR_FONDO.get(color_seleccionado, "#ffffff")
+
 if 'motor_puzzle' not in st.session_state:
     st.session_state.motor_puzzle = RompecabezasMascara()
 
 motor = st.session_state.motor_puzzle
 
-# Botón para ejecutar el algoritmo de backtracking
+# Botón para ejecutar
 if st.button("Buscar Soluciones", type="primary"):
     with st.spinner(f"Analizando combinaciones para despejar el color {color_seleccionado}..."):
-        # El motor modificado ahora devuelve las soluciones y la letra interna calculada ('R', 'A', etc.)
         soluciones, letra_obj = motor.resolver(color_seleccionado)
         
         if soluciones:
             st.success(f"¡Búsqueda completada! Se encontraron **{len(soluciones)}** soluciones válidas.")
-            
-            # Guardar resultados en el estado de la sesión para la navegación
             st.session_state.soluciones = soluciones
             st.session_state.letra_obj = letra_obj
             st.session_state.indice_solucion = 0
@@ -89,14 +98,13 @@ if st.button("Buscar Soluciones", type="primary"):
             if 'soluciones' in st.session_state:
                 del st.session_state.soluciones
 
-# Control de navegación y renderizado de mapas si existen soluciones calculadas
+# Renderizado del mapa
 if 'soluciones' in st.session_state and st.session_state.soluciones:
     soluciones = st.session_state.soluciones
     letra_obj = st.session_state.letra_obj
     
     st.write("---")
     
-    # Selector numérico para iterar entre las soluciones encontradas (Máximo 5)
     idx = st.number_input(
         f"Ver solución (1 al {len(soluciones)}):",
         min_value=1,
@@ -108,53 +116,63 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
     st.session_state.indice_solucion = idx
     
     st.subheader("Mapa de Colocación de Piezas")
-    st.markdown(
-        "Los números del 1 al 10 te indican qué pieza va en cada posición. "
-        "Las celdas marcadas con ✨ corresponden a las ventanas del color expuesto."
-    )
     
-    # Reconstruir la matriz visual forzando las ventanas del color objetivo basado en la letra real
     matriz_visual = motor.reconstruir_matriz_solucion(soluciones[idx], letra_obj)
     
-    # Renderizado de la cuadrícula de 8x8 usando contenedores nativos estilizados con HTML/CSS
+    # Contenedor principal de la rejilla
     for f in range(8):
         cols = st.columns(8)
         for c in range(8):
             val_celda = matriz_visual[f][c]
-            bg_color = PALETA_COLORES.get(val_celda, "#1e1e1e")
             
-            # Formatear el contenido de la celda (Texto numérico o Destello indicador)
             if val_celda == 0:
-                contenido_html = "<span style='color: #d35400; font-size: 18px;'>✨</span>"
-                border_style = "border: 2px dashed #ff4b4b;"
+                # Estilo para "Agujero" profundo mostrando el cartón de color de fondo
+                estilo_html = f"""
+                <div style="
+                    background-color: {color_ventana};
+                    height: 52px;
+                    border-radius: 50%; /* Lo hace redondo como un agujero real */
+                    margin: 2px;
+                    box-shadow: inset 4px 4px 8px rgba(0,0,0,0.8), inset -2px -2px 4px rgba(0,0,0,0.5);
+                    border: 1px solid rgba(0,0,0,0.6);
+                ">
+                </div>
+                """
             else:
-                contenido_html = f"<b style='color: white; font-size: 16px;'>{val_celda}</b>"
-                border_style = "border: 1px solid rgba(0,0,0,0.1);"
-            
-            # Inyección de estilo CSS Inline para garantizar relieve físico y uniformidad compacta
-            cols[c].markdown(
-                f"""
+                # Estilo para "Pieza de Plástico" en relieve
+                bg_color = PALETA_COLORES.get(val_celda, "#1e1e1e")
+                estilo_html = f"""
                 <div style="
                     background-color: {bg_color};
                     height: 52px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    {border_style}
-                    border-radius: 6px;
-                    margin: 2px 1px;
-                    box-shadow: 0 4px 5px rgba(0, 0, 0, 0.2), inset 0 -3px 0 rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.2);
+                    border-radius: 4px;
+                    margin: 1px;
+                    /* Múltiples sombras para simular luz arriba a la izquierda y sombra abajo a la derecha */
+                    box-shadow: 
+                        inset 2px 2px 4px rgba(255, 255, 255, 0.4), 
+                        inset -3px -3px 6px rgba(0, 0, 0, 0.3),
+                        2px 2px 3px rgba(0, 0, 0, 0.5);
+                    border: 1px solid rgba(0,0,0,0.3);
                 ">
-                    {contenido_html}
+                    <b style='
+                        color: rgba(255,255,255,0.9); 
+                        font-size: 16px; 
+                        text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+                        font-family: sans-serif;
+                    '>
+                        {val_celda}
+                    </b>
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
+                """
             
-    # Sección desplegable opcional para auditar la secuencia exacta de armado mecánico
+            cols[c].markdown(estilo_html, unsafe_allow_html=True)
+            
     with st.expander("Ver orden de ensamble paso a paso"):
         for paso_num, paso in enumerate(soluciones[idx], 1):
             st.write(
                 f"**Paso {paso_num}:** Colocar la **Pieza {paso['pieza']}** "
-                f"en la coordenada de origen del tablero (Fila: {paso['coords'][0] + 1}, Columna: {paso['coords'][1] + 1})."
+                f"en la coordenada de origen (Fila: {paso['coords'][0] + 1}, Columna: {paso['coords'][1] + 1})."
             )
