@@ -125,4 +125,36 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
             
             # Formatear el contenido de la celda (Texto numérico o Destello indicador)
             if val_celda == 0:
-                contenido_html = "<span style='color: #d35400; font-size: 18px
+                contenido_html = "<span style='color: #d35400; font-size: 18px;'>✨</span>"
+                border_style = "border: 2px dashed #ff4b4b;"
+            else:
+                contenido_html = f"<b style='color: white; font-size: 16px;'>{val_celda}</b>"
+                border_style = "border: 1px solid rgba(0,0,0,0.1);"
+            
+            # Inyección de estilo CSS Inline para garantizar relieve físico y uniformidad compacta
+            cols[c].markdown(
+                f"""
+                <div style="
+                    background-color: {bg_color};
+                    height: 52px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    {border_style}
+                    border-radius: 6px;
+                    margin: 2px 1px;
+                    box-shadow: 0 4px 5px rgba(0, 0, 0, 0.2), inset 0 -3px 0 rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.2);
+                ">
+                    {contenido_html}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
+    # Sección desplegable opcional para auditar la secuencia exacta de armado mecánico
+    with st.expander("Ver orden de ensamble paso a paso"):
+        for paso_num, paso in enumerate(soluciones[idx], 1):
+            st.write(
+                f"**Paso {paso_num}:** Colocar la **Pieza {paso['pieza']}** "
+                f"en la coordenada de origen del tablero (Fila: {paso['coords'][0] + 1}, Columna: {paso['coords'][1] + 1})."
+            )
