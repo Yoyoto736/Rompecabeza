@@ -2,7 +2,6 @@ import sys
 import os
 
 # --- BLINDAJE DE RUTAS PARA STREAMLIT CLOUD ---
-# Detectamos la ubicación del archivo actual y forzamos la inclusión de la raíz en sys.path
 dir_actual = os.path.dirname(os.path.abspath(__file__))
 dir_raiz = os.path.abspath(os.path.join(dir_actual, '..'))
 
@@ -28,44 +27,41 @@ st.write(
     "buscará todas las combinaciones exactas."
 )
 
-# 1. Selector de Color Objetivo (Coincide con las llaves del diccionario en el motor)
+# Selector de Color Objetivo
 color_seleccionado = st.selectbox(
     "Selecciona el Color Objetivo:",
     ["Rojo", "Azul", "Amarillo", "Verde", "Morado", "Naranja"]
 )
 
-# Diccionario de colores hexadecimales atractivos para cada pieza/bloque
+# Recuperamos la paleta de colores original, viva y contrastada de las soluciones previas
 PALETA_COLORES = {
-    -1: "#1e1e1e", # Vacío / Fondo oscuro
-    0: "#ffffff",  # Ventana objetivo expuesta (Blanco puro para resaltar destellos)
-    1: "#ff4b4b",  # Pieza 1 - Rojo
-    2: "#4bfa4b",  # Pieza 2 - Verde brillante
-    3: "#1f77b4",  # Pieza 3 - Azul marino
-    4: "#f1c40f",  # Pieza 4 - Amarillo
-    5: "#9b59b6",  # Pieza 5 - Morado
-    6: "#1abc9c",  # Pieza 6 - Turquesa
-    7: "#e67e22",  # Pieza 7 - Naranja
-    8: "#f39c12",  # Pieza 8 - Oro / Ocre
-    9: "#e74c3c",  # Pieza 9 - Alizarina / Coral
-    10: "#34495e"  # Pieza 10 - Gris Azulado / Madera oscura
+    -1: "#2e2e2e", # Vacío / Fondo neutro
+    0: "#ffffff",  # Ventana libre (Fondo blanco limpio para resaltar los destellos)
+    1: "#ff4d4d",  # Pieza 1 - Rojo Coral
+    2: "#2ecc71",  # Pieza 2 - Verde Esmeralda
+    3: "#3498db",  # Pieza 3 - Azul Brillante
+    4: "#f1c40f",  # Pieza 4 - Amarillo Girasol
+    5: "#9b59b6",  # Pieza 5 - Amatista / Morado
+    6: "#1abc9c",  # Pieza 6 - Turquesa / Menta
+    7: "#e67e22",  # Pieza 7 - Naranja Otoño
+    8: "#f39c12",  # Pieza 8 - Ámbar / Oro
+    9: "#e74c3c",  # Pieza 9 - Bermellón
+    10: "#34495e"  # Pieza 10 - Asfalto / Azul Grisáceo oscurecido
 }
 
-# Inicialización directa del motor (Sin @st.cache_resource para evitar congelamientos en la RAM)
+# Inicialización del motor en sesión
 if 'motor_puzzle' not in st.session_state:
     st.session_state.motor_puzzle = RompecabezasMascara()
 
 motor = st.session_state.motor_puzzle
 
-# Botón para ejecutar el algoritmo de backtracking
+# Botón para ejecutar el algoritmo
 if st.button("Buscar Soluciones", type="primary"):
     with st.spinner(f"Analizando combinaciones para despejar el color {color_seleccionado}..."):
-        # El motor modificado ahora devuelve las soluciones y la letra interna calculada ('R', 'A', etc.)
         soluciones, letra_obj = motor.resolver(color_seleccionado)
         
         if soluciones:
             st.success(f"¡Búsqueda completada! Se encontraron **{len(soluciones)}** soluciones válidas.")
-            
-            # Guardar resultados en el estado de la sesión para la navegación
             st.session_state.soluciones = soluciones
             st.session_state.letra_obj = letra_obj
             st.session_state.indice_solucion = 0
@@ -77,14 +73,13 @@ if st.button("Buscar Soluciones", type="primary"):
             if 'soluciones' in st.session_state:
                 del st.session_state.soluciones
 
-# Control de navegación y renderizado de mapas si existen soluciones calculadas
+# Renderizado gráfico con la estética original de tarjetas espaciadas
 if 'soluciones' in st.session_state and st.session_state.soluciones:
     soluciones = st.session_state.soluciones
     letra_obj = st.session_state.letra_obj
     
     st.write("---")
     
-    # Selector numérico para iterar entre las soluciones encontradas (Máximo 5)
     idx = st.number_input(
         f"Ver solución (1 al {len(soluciones)}):",
         min_value=1,
@@ -101,37 +96,35 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
         "Las celdas marcadas con ✨ corresponden a las ventanas del color expuesto."
     )
     
-    # Reconstruir la matriz visual forzando las ventanas del color objetivo basado en la letra real
     matriz_visual = motor.reconstruir_matriz_solucion(soluciones[idx], letra_obj)
     
-    # Renderizado de la cuadrícula de 8x8 usando contenedores nativos estilizados con HTML/CSS
+    # Renderizado de la cuadrícula con el CSS original de tarjetas tridimensionales separadas
     for f in range(8):
         cols = st.columns(8)
         for c in range(8):
             val_celda = matriz_visual[f][c]
-            bg_color = PALETA_COLORES.get(val_celda, "#1e1e1e")
+            bg_color = PALETA_COLORES.get(val_celda, "#2e2e2e")
             
-            # Formatear el contenido de la celda (Texto numérico o Destello indicador)
             if val_celda == 0:
-                contenido_html = "<span style='color: #d35400; font-size: 18px;'>✨</span>"
-                border_style = "border: 2px dashed #ff4b4b;" # Borde distintivo para ventanas libres
+                contenido_html = "<span style='color: #e67e22; font-size: 20px; font-weight: bold;'>✨</span>"
+                border_style = "border: 2px dashed #e74c3c;" # Borde rojo discontinuo original
             else:
-                contenido_html = f"<b style='color: white; font-size: 16px;'>{val_celda}</b>"
-                border_style = "border: 1px solid #444444;"
+                contenido_html = f"<span style='color: white; font-size: 16px; font-weight: bold;'>{val_celda}</span>"
+                border_style = "border: 1px solid rgba(0,0,0,0.15);"
             
-            # Inyección de estilo CSS Inline para garantizar uniformidad geométrica en cualquier pantalla
+            # CSS restaurado: incluye los márgenes externos (margin: 4px), esquinas redondeadas suavizadas y sombreado sutil inferior
             cols[c].markdown(
                 f"""
                 <div style="
                     background-color: {bg_color};
-                    height: 55px;
+                    height: 58px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     {border_style}
-                    border-radius: 4px;
-                    margin: 2px 0;
-                    box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+                    border-radius: 6px;
+                    margin: 4px 2px;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 -3px 0 rgba(0,0,0,0.2);
                 ">
                     {contenido_html}
                 </div>
@@ -139,7 +132,6 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
                 unsafe_allow_html=True
             )
             
-    # Sección desplegable opcional para auditar la secuencia exacta de armado mecánico
     with st.expander("Ver orden de ensamble paso a paso"):
         for paso_num, paso in enumerate(soluciones[idx], 1):
             st.write(
