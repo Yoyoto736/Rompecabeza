@@ -68,7 +68,6 @@ color_seleccionado = st.selectbox("Selecciona el Color Objetivo:", list(opciones
 codigo_color = opciones_colores[color_seleccionado]
 
 # Inicializar el motor de cálculo
-@st.cache_resource
 def obtener_motor():
     return RompecabezasMascara()
 
