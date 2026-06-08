@@ -27,20 +27,16 @@ st.write(
     "buscará el encaje perfecto de los bloques."
 )
 
-color_seleccionado = st.selectbox(
-    "Selecciona el Color Objetivo:",
-    ["Rojo", "Azul", "Amarillo", "Verde", "Morado", "Naranja"]
-)
-
-# --- NUEVA LÓGICA DE LIMPIEZA ---
-if 'color_previo' not in st.session_state:
-    st.session_state.color_previo = color_seleccionado
-
-if st.session_state.color_previo != color_seleccionado:
-    st.session_state.color_previo = color_seleccionado
+# --- LÓGICA DE LIMPIEZA ---
+def limpiar_estado():
     if 'soluciones' in st.session_state:
         del st.session_state.soluciones
-# --------------------------------
+
+color_seleccionado = st.selectbox(
+    "Selecciona el Color Objetivo:",
+    ["Rojo", "Azul", "Amarillo", "Verde", "Morado", "Naranja"],
+    on_change=limpiar_estado
+)
 
 # Paleta de tonos de madera
 PALETA_MADERA = {
@@ -110,11 +106,25 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
     
     matriz_visual = motor.reconstruir_matriz_solucion(soluciones[idx], letra_obj)
     
-    # --- CONSTRUCCIÓN DEL GRID HTML/CSS SIN SANGRÍAS ---
-    # Contenedor principal
     html_grid = f"""<div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; background-color: #1a1a1a; padding: 8px; border: 12px solid #c99b68; border-radius: 4px; box-shadow: 5px 5px 15px rgba(0,0,0,0.6), inset 3px 3px 8px rgba(0,0,0,0.8); width: 100%; max-width: 500px; margin: 0 auto;">"""
     
-    # Generación de las 64 celdas
     for f in range(8):
         for c in range(8):
-            val_celda = matriz_
+            val_celda = matriz_visual[f][c]
+            
+            if val_celda == 0:
+                html_grid += f"""<div style="background-color: {color_ventana}; aspect-ratio: 1 / 1; border-radius: 2px; box-shadow: inset 4px 4px 8px rgba(0,0,0,0.8), inset -2px -2px 4px rgba(0,0,0,0.5);"></div>"""
+            else:
+                bg_color = PALETA_MADERA.get(val_celda, "#d4a373")
+                html_grid += f"""<div style="background-color: {bg_color}; background-image: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.1) 100%); aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; border-radius: 2px; border: 1px solid #8b5a2b; box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.4), 2px 2px 3px rgba(0, 0, 0, 0.5);"><b style='color: #4a2e15; font-size: clamp(10px, 3.5vw, 16px); font-family: monospace; text-shadow: 1px 1px 0px rgba(255,255,255,0.2); margin: 0; padding: 0;'>{val_celda}</b></div>"""
+                
+    html_grid += "</div>"
+    
+    st.markdown(html_grid, unsafe_html=True)
+            
+    with st.expander("Ver orden de ensamble paso a paso"):
+        for paso_num, paso in enumerate(soluciones[idx], 1):
+            st.write(
+                f"**Paso {paso_num}:** Colocar la **Pieza {paso['pieza']}** "
+                f"en la coordenada de origen (Fila: {paso['coords'][0] + 1}, Columna: {paso['coords'][1] + 1})."
+            )
