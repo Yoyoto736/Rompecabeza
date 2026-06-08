@@ -71,7 +71,7 @@ if st.button("Buscar Soluciones", type="primary"):
         # Convertimos el string al caracter correspondiente ('R', 'A', etc.)
         letra_interna = MAPEO_LETRAS[color_seleccionado]
         
-        # Corrección del TypeError: Tu motor devuelve únicamente la lista de soluciones
+        # Tu motor devuelve únicamente la lista de soluciones
         lista_soluciones = motor.resolver(letra_interna)
         
         if lista_soluciones and len(lista_soluciones) > 0:
@@ -83,20 +83,24 @@ if st.button("Buscar Soluciones", type="primary"):
                 f"No se encontraron soluciones analíticas que logren despejar completamente "
                 f"las 4 ventanas del color {color_seleccionado} con las piezas dadas."
             )
+            # Limpieza inmediata si no hay soluciones para evitar estados corruptos
             if 'soluciones' in st.session_state:
                 del st.session_state.soluciones
 
 # Renderizado gráfico con la estética original de tarjetas espaciadas en relieve
-if 'soluciones' in st.session_state and st.session_state.soluciones:
+if 'soluciones' in st.session_state and isinstance(st.session_state.soluciones, list) and len(st.session_state.soluciones) > 0:
     soluciones = st.session_state.soluciones
     
     st.write("---")
     
+    # Asegurar que el índice no se desborde si cambia la lista de soluciones
+    max_soluciones = len(soluciones)
+    
     idx = st.number_input(
-        f"Ver solución (1 al {len(soluciones)}):",
+        f"Ver solución (1 al {max_soluciones}):",
         min_value=1,
-        max_value=len(soluciones),
-        value=st.session_state.indice_solucion + 1,
+        max_value=max_soluciones,
+        value=min(st.session_state.get('indice_solucion', 0) + 1, max_soluciones),
         step=1
     ) - 1
     
@@ -108,46 +112,49 @@ if 'soluciones' in st.session_state and st.session_state.soluciones:
         "Las celdas marcadas con ✨ corresponden a las ventanas del color expuesto."
     )
     
-    # Ejecución segura alineada al motor exacto
-    matriz_visual = motor.reconstruir_matriz_solucion(soluciones[idx])
-    
-    # Renderizado de la cuadrícula con márgenes y sombras tridimensionales
-    for f in range(8):
-        cols = st.columns(8)
-        for c in range(8):
-            val_celda = matriz_visual[f][c]
-            bg_color = PALETA_COLORES.get(val_celda, "#2e2e2e")
-            
-            if val_celda == 0:
-                contenido_html = "<span style='color: #e67e22; font-size: 20px; font-weight: bold;'>✨</span>"
-                border_style = "border: 2px dashed #e74c3c;" # Borde discontinuo rojo original
-            else:
-                contenido_html = f"<span style='color: white; font-size: 16px; font-weight: bold;'>{val_celda}</span>"
-                border_style = "border: 1px solid rgba(0,0,0,0.15);"
-            
-            # CSS Restaurado: Mantiene el espaciado exacto de mosaicos independientes (margin: 4px 2px)
-            cols[c].markdown(
-                f"""
-                <div style="
-                    background-color: {bg_color};
-                    height: 58px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    {border_style}
-                    border-radius: 6px;
-                    margin: 4px 2px;
-                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 -3px 0 rgba(0,0,0,0.2);
-                ">
-                    {contenido_html}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-            
-    with st.expander("Ver orden de ensamble paso a paso"):
-        for paso_num, paso in enumerate(soluciones[idx], 1):
-            st.write(
-                f"**Paso {paso_num}:** Colocar la **Pieza {paso['pieza']}** "
-                f"en la coordenada de origen del tablero (Fila: {paso['coords'][0] + 1}, Columna: {paso['coords'][1] + 1})."
-            )
+    # SEGURO TÉCNICO: Validamos que la solución actual exista antes de pasarla al motor
+    if idx < len(soluciones) and soluciones[idx] is not None:
+        matriz_visual = motor.reconstruir_matriz_solucion(soluciones[idx])
+        
+        # Renderizado de la cuadrícula con márgenes y sombras tridimensionales (Estilo Mosaico)
+        for f in range(8):
+            cols = st.columns(8)
+            for c in range(8):
+                val_celda = matriz_visual[f][c]
+                bg_color = PALETA_COLORES.get(val_celda, "#2e2e2e")
+                
+                if val_celda == 0:
+                    contenido_html = "<span style='color: #e67e22; font-size: 20px; font-weight: bold;'>✨</span>"
+                    border_style = "border: 2px dashed #e74c3c;" # Borde discontinuo rojo original
+                else:
+                    contenido_html = f"<span style='color: white; font-size: 16px; font-weight: bold;'>{val_celda}</span>"
+                    border_style = "border: 1px solid rgba(0,0,0,0.15);"
+                
+                # CSS Restaurado: Espaciado exacto de mosaicos independientes (margin: 4px 2px)
+                cols[c].markdown(
+                    f"""
+                    <div style="
+                        background-color: {bg_color};
+                        height: 58px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        {border_style}
+                        border-radius: 6px;
+                        margin: 4px 2px;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 -3px 0 rgba(0,0,0,0.2);
+                    ">
+                        {contenido_html}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                
+        with st.expander("Ver orden de ensamble paso a paso"):
+            for paso_num, paso in enumerate(soluciones[idx], 1):
+                st.write(
+                    f"**Paso {paso_num}:** Colocar la **Pieza {paso['pieza']}** "
+                    f"en la coordenada de origen del tablero (Fila: {paso['coords'][0] + 1}, Columna: {paso['coords'][1] + 1})."
+                )
+    else:
+        st.info("Por favor, presiona el botón 'Buscar Soluciones' para cargar el mapa.")
