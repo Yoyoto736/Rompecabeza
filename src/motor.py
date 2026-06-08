@@ -70,7 +70,7 @@ class RompecabezasMascara:
             'Amarillo': 'Y',
             'Verde': 'V',
             'Morado': 'M',
-            'Naranja': 'O' # Ajusta esta letra si usaste otra en tu archivo para el sexto color
+            'Naranja': 'N' 
         }
         letra_objetivo = mapeo_letras.get(nombre_color, 'A')
         
