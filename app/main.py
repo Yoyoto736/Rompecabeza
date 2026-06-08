@@ -1,3 +1,16 @@
+import sys
+import os
+
+# --- BLINDAJE DE RUTAS PARA STREAMLIT CLOUD ---
+# Detectamos la ubicación del archivo actual y forzamos la inclusión de la raíz en sys.path
+dir_actual = os.path.dirname(os.path.abspath(__file__))
+dir_raiz = os.path.abspath(os.path.join(dir_actual, '..'))
+
+if dir_raiz not in sys.path:
+    sys.path.insert(0, dir_raiz)
+if dir_actual not in sys.path:
+    sys.path.insert(1, dir_actual)
+
 import streamlit as st
 import numpy as np
 from src.motor import RompecabezasMascara
